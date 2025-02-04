@@ -4,8 +4,14 @@ import openai
 import datetime
 
 # --- Configuration ---
-os.getenv("NEWS_API_KEY")
-os.getenv("OPENAI_API_KEY")
+# Assign environment variables to local variables
+NEWS_API_KEY = os.getenv("NEWS_API_KEY")
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+
+# Check that the keys are present; otherwise, throw an error.
+if not NEWS_API_KEY or not OPENAI_API_KEY:
+    raise Exception("Missing API keys! Set NEWS_API_KEY and OPENAI_API_KEY as environment variables.")
+
 openai.api_key = OPENAI_API_KEY
 
 # Folder to store blog posts (ensure this folder exists in your repo)
