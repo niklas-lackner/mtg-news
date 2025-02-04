@@ -4,8 +4,8 @@ import openai
 import datetime
 
 # --- Configuration ---
-NEWS_API_KEY = "YOUR_NEWS_API_KEY"        # Get from https://newsapi.org/
-OPENAI_API_KEY = "YOUR_OPENAI_API_KEY"      # Get from https://platform.openai.com/
+NEWS_API_KEY = "90402f09ec9441a2bf43d6a9514f596a"        # Get from https://newsapi.org/
+OPENAI_API_KEY = "org-Ep72tR5nXleYxu51SrCtWjWM"      # Get from https://platform.openai.com/
 openai.api_key = OPENAI_API_KEY
 
 # Folder to store blog posts (ensure this folder exists in your repo)
