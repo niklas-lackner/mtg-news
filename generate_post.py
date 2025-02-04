@@ -4,11 +4,8 @@ import openai
 import datetime
 
 # --- Configuration ---
-# Assign environment variables to local variables
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-
-# Check that the keys are present; otherwise, throw an error.
 if not NEWS_API_KEY or not OPENAI_API_KEY:
     raise Exception("Missing API keys! Set NEWS_API_KEY and OPENAI_API_KEY as environment variables.")
 
@@ -20,7 +17,6 @@ POSTS_FOLDER = "posts"
 # --- Step 1: Fetch MTG News from NewsAPI ---
 query = "Magic: The Gathering"
 url = f"https://newsapi.org/v2/everything?q={query}&sortBy=publishedAt&language=en&apiKey={NEWS_API_KEY}"
-
 response = requests.get(url)
 data = response.json()
 
@@ -39,7 +35,7 @@ article_summaries = "\n".join(
     [f"- {article['title']} ({article['url']})" for article in selected_articles]
 )
 
-# --- Step 2: Generate Blog Post with OpenAI ---
+# --- Step 2: Generate Blog Post with OpenAI using ChatCompletion ---
 prompt = (
     f"Write a short, engaging blog post summarizing the latest Magic: The Gathering news. "
     f"Include an introduction, a brief summary of each news item, and a conclusion. "
@@ -47,14 +43,18 @@ prompt = (
     f"Keep it concise and fun."
 )
 
-openai_response = openai.Completion.create(
-    engine="text-davinci-003",
-    prompt=prompt,
+# Use the ChatCompletion API with the gpt-3.5-turbo model
+openai_response = openai.ChatCompletion.create(
+    model="gpt-3.5-turbo",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant that writes blog posts."},
+        {"role": "user", "content": prompt}
+    ],
     max_tokens=300,
     temperature=0.7,
 )
 
-blog_text = openai_response.choices[0].text.strip()
+blog_text = openai_response.choices[0].message.content.strip()
 
 # --- Step 3: Save the Post as a Markdown File ---
 today_str = datetime.date.today().isoformat()  # e.g., "2025-02-04"
