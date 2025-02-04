@@ -1,3 +1,5 @@
+freeze
+
 name: Generate Daily MTG News Blog
 
 on:
