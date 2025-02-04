@@ -1,3 +1,5 @@
+freeze
+
 import os
 import requests
 import openai
