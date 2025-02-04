@@ -2,6 +2,7 @@ import os
 import requests
 import openai
 import datetime
+import tenacity  # Library for retrying with exponential backoff
 
 # --- Configuration ---
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
@@ -13,6 +14,7 @@ openai.api_key = OPENAI_API_KEY
 
 # Folder to store blog posts (ensure this folder exists in your repo)
 POSTS_FOLDER = "posts"
+os.makedirs(POSTS_FOLDER, exist_ok=True)
 
 # --- Step 1: Fetch MTG News from NewsAPI ---
 query = "Magic: The Gathering"
@@ -43,17 +45,25 @@ prompt = (
     f"Keep it concise and fun."
 )
 
-# Use the ChatCompletion API with the gpt-3.5-turbo model
-openai_response = openai.ChatCompletion.create(
-    model="gpt-3.5-turbo",
-    messages=[
-        {"role": "system", "content": "You are a helpful assistant that writes blog posts."},
-        {"role": "user", "content": prompt}
-    ],
-    max_tokens=300,
-    temperature=0.7,
+# Use Tenacity to retry if a RateLimitError occurs
+@tenacity.retry(
+    wait=tenacity.wait_random_exponential(min=1, max=60),
+    stop=tenacity.stop_after_attempt(6),
+    retry=tenacity.retry_if_exception_type(openai.error.RateLimitError),
 )
+def generate_blog_text(prompt):
+    return openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant that writes blog posts."},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=300,
+        temperature=0.7,
+    )
 
+# This call will retry automatically if a rate limit error is encountered.
+openai_response = generate_blog_text(prompt)
 blog_text = openai_response.choices[0].message.content.strip()
 
 # --- Step 3: Save the Post as a Markdown File ---
