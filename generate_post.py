@@ -47,7 +47,7 @@ headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
 # Set a token limit that, along with your prompt, stays within the 2048-token limit.
 payload = {
     "inputs": prompt,
-    "parameters": {"max_new_tokens": 200, "temperature": 0.7, "do_sample": True}
+    "parameters": {"max_new_tokens": 1337, "temperature": 0.7, "do_sample": True}
 }
 
 hf_response = requests.post(API_URL, headers=headers, json=payload)
