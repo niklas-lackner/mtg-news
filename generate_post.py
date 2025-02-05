@@ -8,6 +8,11 @@ HUGGINGFACE_API_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
 if not NEWS_API_KEY or not HUGGINGFACE_API_TOKEN:
     raise Exception("Missing API keys! Set NEWS_API_KEY and HUGGINGFACE_API_TOKEN as environment variables.")
 
+hf_response = requests.post(API_URL, headers=headers, json=payload)
+hf_response_json = hf_response.json()
+print("Raw Hugging Face response:", hf_response_json)
+
+
 # Folder to store blog posts (for Jekyll, posts are usually in _posts)
 POSTS_FOLDER = os.path.join("docs", "_posts")
 os.makedirs(POSTS_FOLDER, exist_ok=True)
