@@ -10,12 +10,13 @@ HUGGINGFACE_API_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
 if not NEWS_API_KEY or not HUGGINGFACE_API_TOKEN:
     raise Exception("Missing API keys! Set NEWS_API_KEY and HUGGINGFACE_API_TOKEN as environment variables.")
 
-# For Jekyll, place posts in the _posts folder inside docs
+# Define folders
 POSTS_FOLDER = os.path.join("docs", "_posts")
+REDUNDANT_FOLDER = os.path.join("docs", "redundant")
 os.makedirs(POSTS_FOLDER, exist_ok=True)
+os.makedirs(REDUNDANT_FOLDER, exist_ok=True)
 
 # --- Step 1: Fetch a Relevant News Article from NewsAPI ---
-# Refine the query to be more specific so you get articles that are truly about Magic: The Gathering tournaments/news.
 query = '"Magic: The Gathering" AND tournament'
 encoded_query = urllib.parse.quote(query)
 url = f"https://newsapi.org/v2/everything?q={encoded_query}&sortBy=relevancy&language=en&apiKey={NEWS_API_KEY}"
@@ -28,7 +29,6 @@ articles = data.get("articles", [])
 if not articles:
     raise Exception("No articles found for query.")
 
-# For this example, select the first article.
 selected_article = articles[0]
 
 # (Optional: Print key details for debugging)
@@ -39,13 +39,11 @@ print("Source:", selected_article.get('source', {}).get('name', 'Unknown Source'
 print("URL:", selected_article.get('url', 'No URL'))
 
 headline = selected_article.get('title', 'No Title')
-# Prefer description if available; if not, fall back to content or headline.
 article_content = selected_article.get('description') or selected_article.get('content') or headline
 source_name = selected_article.get('source', {}).get('name', 'Unknown Source')
 article_url = selected_article.get('url', 'No URL')
 
 # --- Step 2: Generate a Concise Summary Using Hugging Face Inference API ---
-# Construct a prompt that instructs the model to summarize the article in about three sentences.
 prompt = (
     "Summarize the following Magic: The Gathering news article in 3 concise sentences. "
     "Focus on capturing the key points and avoid altering the main details. "
@@ -66,7 +64,7 @@ def generate_blog_post(prompt):
     payload = {
         "inputs": prompt,
         "parameters": {
-            "max_new_tokens": 300,  # Adjust if needed; this should allow for a concise summary.
+            "max_new_tokens": 300,  # Allows for a concise summary.
             "temperature": 0.7,
             "do_sample": True,
             "stop": ["\n\n"]
@@ -85,34 +83,61 @@ try:
 except Exception as e:
     raise Exception("Failed to generate blog post after retries:", e)
 
-# Remove the prompt from the generated text if it is included.
 if generated_text.startswith(prompt):
     summary = generated_text[len(prompt):].strip()
 else:
     summary = generated_text
 
-# --- Title Integration ---
-# Create a custom title that includes a teaser from the summary.
+# Append the original article URL and source at the end.
+final_output = f"{summary}\n\nSource: {source_name} ({article_url})"
+
+# --- Duplicate Check Function ---
+def extract_body(markdown_text):
+    """
+    Extracts the body content from a Markdown file, ignoring the YAML front matter.
+    Assumes front matter is between the first two occurrences of '---'.
+    """
+    parts = markdown_text.split("---")
+    if len(parts) >= 3:
+        return parts[2].strip()
+    return markdown_text.strip()
+
+def is_duplicate(new_content, folder):
+    """
+    Checks if new_content (final_output) already exists in any Markdown file in the specified folder.
+    """
+    for filename in os.listdir(folder):
+        if filename.endswith(".md"):
+            filepath = os.path.join(folder, filename)
+            with open(filepath, "r", encoding="utf-8") as f:
+                content = f.read()
+                body = extract_body(content)
+                if body == new_content:
+                    return True
+    return False
+
+# --- Determine Destination Folder Based on Duplicate Check ---
+destination_folder = POSTS_FOLDER
+if is_duplicate(final_output, POSTS_FOLDER):
+    print("Duplicate content detected. Saving to redundant folder instead.")
+    destination_folder = REDUNDANT_FOLDER
+
+# --- Step 3: Create a Custom Title with a Spoiler ---
 if summary:
-    # Try to extract the first sentence; if not, use the first 60 characters.
     if '.' in summary:
         teaser = summary.split('.')[0].strip()
     else:
         teaser = summary[:60].strip()
-    # Optionally, truncate the teaser to 50 characters.
     teaser = (teaser[:50] + '...') if len(teaser) > 50 else teaser
 else:
     teaser = "No summary available"
 
 custom_title = f"MTG News for {datetime.date.today().isoformat()} - {teaser}"
 
-# Append the original article URL and source at the end.
-final_output = f"{summary}\n\nSource: {source_name} ({article_url})"
-
-# --- Step 3: Save the Summary as a Markdown File ---
-today_str = datetime.date.today().isoformat()  # e.g., "2025-02-05"
+# --- Step 4: Save the Summary as a Markdown File ---
+today_str = datetime.date.today().isoformat()
 timestamp = datetime.datetime.now().strftime("%H%M%S")
-filename = os.path.join(POSTS_FOLDER, f"{today_str}-{timestamp}-mtg-news.md")
+filename = os.path.join(destination_folder, f"{today_str}-{timestamp}-mtg-news.md")
 
 markdown_content = f"""---
 title: "{custom_title}"
