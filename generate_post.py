@@ -21,27 +21,30 @@ encoded_query = urllib.parse.quote(query)
 url = f"https://newsapi.org/v2/everything?q={encoded_query}&sortBy=relevancy&language=en&apiKey={NEWS_API_KEY}"
 #url = f"https://newsapi.org/v2/everything?q={query}&sortBy=publishedAt&language=en&apiKey={NEWS_API_KEY}"
 response = requests.get(url)
-data = response.json()
-
-if data.get("status") != "ok":
+data = response.json()if data.get("status") != "ok":
     raise Exception("Error fetching news:", data)
 
 articles = data.get("articles", [])
 if not articles:
     raise Exception("No articles found for query.")
 
-# Use only one article for a concise summary.
+# Use only one article for the summary.
 selected_article = articles[0]
-article_summary = f"- {selected_article['title']}"
-# Extract the news source from the selected article.
+# Use the title as headline
+headline = selected_article.get('title', 'No Title')
+# Use the description or content for additional context (if available)
+article_content = selected_article.get('description') or selected_article.get('content') or headline
+# Extract the news source from the selected article
 source_name = selected_article.get('source', {}).get('name', 'Unknown Source')
 
-# --- Step 2: Generate a Very Concise Summary Using Hugging Face ---
-# Construct a simple, clear prompt.
+# --- Step 2: Generate a Detailed Summary Using Hugging Face Inference API ---
+# Construct a prompt that instructs the model to generate a comprehensive summary.
 prompt = (
-    "Write a concise one-paragraph summary about the following Magic: The Gathering news headline. "
-    "Do not include any URLs or references.\n\n"
-    "Headline: " + article_summary + "\n\n"
+    "Generate a detailed summary (up to 1000 tokens) of the following Magic: The Gathering news article. "
+    "The summary should be written in English, be comprehensive, and capture the main points of the article. "
+    "Do not include any URLs or external references in the final output. \n\n"
+    "Headline: " + headline + "\n\n"
+    "Article Content: " + article_content + "\n\n"
     "Summary:"
 )
 
@@ -53,10 +56,16 @@ prompt = (
 def generate_blog_post(prompt):
     API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B"
     headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
-    # Set a lower max_new_tokens to keep output concise (adjust if needed).
+    # Adjust max_new_tokens to 1000 to allow a more detailed summary.
     payload = {
         "inputs": prompt,
-        "parameters": {"max_new_tokens": 300, "temperature": 0.7, "do_sample": True, "stop": ["\n\n"]}
+        "parameters": {
+            "max_new_tokens": 1000,
+            "temperature": 0.7,
+            "do_sample": True,
+            # Optionally, you can specify a stop sequence if needed.
+            # "stop": ["\n\n"]
+        }
     }
     response = requests.post(API_URL, headers=headers, json=payload)
     result = response.json()
