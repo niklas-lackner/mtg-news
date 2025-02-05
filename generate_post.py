@@ -1,18 +1,12 @@
-freeze
-
 import os
 import requests
-import openai
 import datetime
-import tenacity  # Library for retrying with exponential backoff
 
 # --- Configuration ---
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not NEWS_API_KEY or not OPENAI_API_KEY:
-    raise Exception("Missing API keys! Set NEWS_API_KEY and OPENAI_API_KEY as environment variables.")
-
-openai.api_key = OPENAI_API_KEY
+HUGGINGFACE_API_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
+if not NEWS_API_KEY or not HUGGINGFACE_API_TOKEN:
+    raise Exception("Missing API keys! Set NEWS_API_KEY and HUGGINGFACE_API_TOKEN as environment variables.")
 
 # Folder to store blog posts (ensure this folder exists in your repo)
 POSTS_FOLDER = "posts"
@@ -33,13 +27,11 @@ if not articles:
 
 # Select top 5 articles (or fewer if less are available)
 selected_articles = articles[:5]
-
-# Create a summary list of articles (title and URL)
 article_summaries = "\n".join(
     [f"- {article['title']} ({article['url']})" for article in selected_articles]
 )
 
-# --- Step 2: Generate Blog Post with OpenAI using ChatCompletion ---
+# --- Step 2: Generate Blog Post with Hugging Face Inference API ---
 prompt = (
     f"Write a short, engaging blog post summarizing the latest Magic: The Gathering news. "
     f"Include an introduction, a brief summary of each news item, and a conclusion. "
@@ -47,26 +39,19 @@ prompt = (
     f"Keep it concise and fun."
 )
 
-# Use Tenacity to retry if a RateLimitError occurs
-@tenacity.retry(
-    wait=tenacity.wait_random_exponential(min=1, max=60),
-    stop=tenacity.stop_after_attempt(6),
-    retry=tenacity.retry_if_exception_type(openai.error.RateLimitError),
-)
-def generate_blog_text(prompt):
-    return openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant that writes blog posts."},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=300,
-        temperature=0.7,
-    )
+# Set the API endpoint (you can try other models if desired)
+API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B"
+headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
+payload = {"inputs": prompt, "parameters": {"max_new_tokens": 300}}
 
-# This call will retry automatically if a rate limit error is encountered.
-openai_response = generate_blog_text(prompt)
-blog_text = openai_response.choices[0].message.content.strip()
+hf_response = requests.post(API_URL, headers=headers, json=payload)
+hf_response_json = hf_response.json()
+
+# Check the response format and extract generated text
+if isinstance(hf_response_json, list) and "generated_text" in hf_response_json[0]:
+    blog_text = hf_response_json[0]["generated_text"].strip()
+else:
+    raise Exception("Unexpected response format from Hugging Face API", hf_response_json)
 
 # --- Step 3: Save the Post as a Markdown File ---
 today_str = datetime.date.today().isoformat()  # e.g., "2025-02-04"
