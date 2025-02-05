@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MTG Grind Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <h1>MTG Grind Dashboard</h1>
+    <div id="summary"></div>
+    <canvas id="resultsChart" width="400" height="200"></canvas>
+    <script>
+      // Fetch the JSON data
+      fetch('../mtg_data.json')
+        .then(response => response.json())
+        .then(data => {
+          document.getElementById('summary').innerText = "Total games parsed: " + data.games.length;
+          // Example: count wins and losses (adjust based on your actual data)
+          let winCount = data.games.filter(g => g.result.toLowerCase() === "win").length;
+          let lossCount = data.games.filter(g => g.result.toLowerCase() === "loss").length;
+          const ctx = document.getElementById('resultsChart').getContext('2d');
+          new Chart(ctx, {
+            type: 'pie',
+            data: {
+              labels: ['Wins', 'Losses'],
+              datasets: [{
+                data: [winCount, lossCount],
+                backgroundColor: ['#4CAF50', '#F44336']
+              }]
+            },
+            options: {
+              title: {
+                display: true,
+                text: 'Win/Loss Ratio'
+              }
+            }
+          });
+        })
+        .catch(err => console.error('Error loading JSON data:', err));
+    </script>
+</body>
+</html>
