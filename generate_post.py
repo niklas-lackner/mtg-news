@@ -3,7 +3,6 @@ import requests
 import datetime
 import tenacity  # Ensure you've installed it: pip install tenacity
 import urllib.parse
-import re
 
 # --- Configuration ---
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
@@ -11,12 +10,12 @@ HUGGINGFACE_API_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
 if not NEWS_API_KEY or not HUGGINGFACE_API_TOKEN:
     raise Exception("Missing API keys! Set NEWS_API_KEY and HUGGINGFACE_API_TOKEN as environment variables.")
 
-# For Jekyll, posts go into the _posts folder inside docs
+# For Jekyll, place posts in the _posts folder inside docs
 POSTS_FOLDER = os.path.join("docs", "_posts")
 os.makedirs(POSTS_FOLDER, exist_ok=True)
 
 # --- Step 1: Fetch a Relevant News Article from NewsAPI ---
-# Using a refined query to get articles that are truly about Magic: The Gathering tournaments/news.
+# Refine the query to be more specific so you get articles that are truly about Magic: The Gathering tournaments/news.
 query = '"Magic: The Gathering" AND tournament'
 encoded_query = urllib.parse.quote(query)
 url = f"https://newsapi.org/v2/everything?q={encoded_query}&sortBy=relevancy&language=en&apiKey={NEWS_API_KEY}"
@@ -24,14 +23,15 @@ response = requests.get(url)
 data = response.json()
 if data.get("status") != "ok":
     raise Exception("Error fetching news:", data)
+
 articles = data.get("articles", [])
 if not articles:
     raise Exception("No articles found for query.")
 
-# Select the first article
+# For this example, select the first article.
 selected_article = articles[0]
 
-# Optional: Print key details for debugging
+# (Optional: Print key details for debugging)
 print("Selected article details:")
 print("Title:", selected_article.get('title', 'No Title'))
 print("Description:", selected_article.get('description', 'No Description'))
@@ -45,11 +45,11 @@ source_name = selected_article.get('source', {}).get('name', 'Unknown Source')
 article_url = selected_article.get('url', 'No URL')
 
 # --- Step 2: Generate a Concise Summary Using Hugging Face Inference API ---
-# Construct a prompt that instructs the model to generate exactly 3 distinct sentences.
+# Construct a prompt that instructs the model to summarize the article in about three sentences.
 prompt = (
-    "Summarize the following Magic: The Gathering news article in exactly 3 concise sentences. "
-    "Each sentence should capture a different key point of the article. "
-    "Do not include any URLs or external references. \n\n"
+    "Summarize the following Magic: The Gathering news article in 3 concise sentences. "
+    "Focus on capturing the key points and avoid altering the main details. "
+    "Do not include any URLs or external references in your summary. \n\n"
     "Headline: " + headline + "\n\n"
     "Article Content: " + article_content + "\n\n"
     "Summary:"
@@ -66,11 +66,10 @@ def generate_blog_post(prompt):
     payload = {
         "inputs": prompt,
         "parameters": {
-            "max_new_tokens": 300,  # Allow up to 300 tokens for the summary.
+            "max_new_tokens": 300,  # Adjust if needed; this should allow for a concise summary.
             "temperature": 0.7,
             "do_sample": True,
-            # Optionally, specify a stop sequence if desired.
-            # "stop": ["\n\n"]
+            "stop": ["\n\n"]
         }
     }
     response = requests.post(API_URL, headers=headers, json=payload)
@@ -86,27 +85,28 @@ try:
 except Exception as e:
     raise Exception("Failed to generate blog post after retries:", e)
 
-# --- Post-process the generated text ---
 # Remove the prompt from the generated text if it is included.
 if generated_text.startswith(prompt):
-    generated_text = generated_text[len(prompt):].strip()
+    summary = generated_text[len(prompt):].strip()
+else:
+    summary = generated_text
 
-# Split the text into sentences using a simple regex.
-sentences = re.split(r'(?<=[.!?])\s+', generated_text)
-# Keep only the first three sentences.
-summary_sentences = sentences[:3]
-summary = " ".join(summary_sentences).strip()
-
-# --- Create a Custom Title with a Spoiler ---
-# Use the first sentence as a teaser (limit to 50 characters for brevity).
+# --- Title Integration ---
+# Create a custom title that includes a teaser from the summary.
 if summary:
-    teaser = summary.split('.')[0].strip()
+    # Try to extract the first sentence; if not, use the first 60 characters.
+    if '.' in summary:
+        teaser = summary.split('.')[0].strip()
+    else:
+        teaser = summary[:60].strip()
+    # Optionally, truncate the teaser to 50 characters.
     teaser = (teaser[:50] + '...') if len(teaser) > 50 else teaser
 else:
     teaser = "No summary available"
+
 custom_title = f"MTG News for {datetime.date.today().isoformat()} - {teaser}"
 
-# Append the source and original URL at the end of the summary.
+# Append the original article URL and source at the end.
 final_output = f"{summary}\n\nSource: {source_name} ({article_url})"
 
 # --- Step 3: Save the Summary as a Markdown File ---
