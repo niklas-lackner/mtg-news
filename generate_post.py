@@ -45,7 +45,7 @@ prompt = (
     "Keep it concise and fun."
 )
 
-API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B"
+API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-j-6B"
 headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
 
 
