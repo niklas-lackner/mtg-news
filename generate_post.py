@@ -2,6 +2,8 @@ import os
 import requests
 import datetime
 import tenacity  # Make sure you've installed tenacity (pip install tenacity)
+import urllib.parse
+
 
 # --- Configuration ---
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
@@ -14,8 +16,10 @@ POSTS_FOLDER = os.path.join("docs", "_posts")
 os.makedirs(POSTS_FOLDER, exist_ok=True)
 
 # --- Step 1: Fetch a News Headline from NewsAPI ---
-query = "Magic: The Gathering"
-url = f"https://newsapi.org/v2/everything?q={query}&sortBy=publishedAt&language=en&apiKey={NEWS_API_KEY}"
+query = '"Magic: The Gathering" AND competitive'
+encoded_query = urllib.parse.quote(query)
+url = f"https://newsapi.org/v2/everything?q={encoded_query}&sortBy=relevancy&language=en&apiKey={NEWS_API_KEY}"
+#url = f"https://newsapi.org/v2/everything?q={query}&sortBy=publishedAt&language=en&apiKey={NEWS_API_KEY}"
 response = requests.get(url)
 data = response.json()
 
