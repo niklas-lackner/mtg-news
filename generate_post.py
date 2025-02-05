@@ -1,7 +1,7 @@
 import os
 import requests
 import datetime
-import tenacity  # Make sure you've installed it: pip install tenacity
+import tenacity  # Ensure you've installed it: pip install tenacity
 import urllib.parse
 
 # --- Configuration ---
@@ -14,8 +14,9 @@ if not NEWS_API_KEY or not HUGGINGFACE_API_TOKEN:
 POSTS_FOLDER = os.path.join("docs", "_posts")
 os.makedirs(POSTS_FOLDER, exist_ok=True)
 
-# --- Step 1: Fetch a News Article from NewsAPI ---
-query = '"Magic: The Gathering" AND competitive'
+# --- Step 1: Fetch a Relevant News Article from NewsAPI ---
+# Refine the query to be more specific so you get articles that are truly about Magic: The Gathering tournaments/news.
+query = '"Magic: The Gathering" AND tournament'
 encoded_query = urllib.parse.quote(query)
 url = f"https://newsapi.org/v2/everything?q={encoded_query}&sortBy=relevancy&language=en&apiKey={NEWS_API_KEY}"
 response = requests.get(url)
@@ -27,23 +28,28 @@ articles = data.get("articles", [])
 if not articles:
     raise Exception("No articles found for query.")
 
-# Use only one article for the summary.
+# For this example, select the first article.
 selected_article = articles[0]
-# Use the title as headline.
+
+# (Optional: Print key details for debugging)
+print("Selected article details:")
+print("Title:", selected_article.get('title', 'No Title'))
+print("Description:", selected_article.get('description', 'No Description'))
+print("Source:", selected_article.get('source', {}).get('name', 'Unknown Source'))
+print("URL:", selected_article.get('url', 'No URL'))
+
 headline = selected_article.get('title', 'No Title')
-# Use the description or content for additional context (if available).
+# Prefer description if available; if not, fall back to content or headline.
 article_content = selected_article.get('description') or selected_article.get('content') or headline
-# Extract the news source name and the article URL.
 source_name = selected_article.get('source', {}).get('name', 'Unknown Source')
 article_url = selected_article.get('url', 'No URL')
 
-# --- Step 2: Generate a Detailed Summary Using Hugging Face Inference API ---
-# Construct a prompt that instructs the model to generate a comprehensive summary.
+# --- Step 2: Generate a Concise Summary Using Hugging Face Inference API ---
+# Construct a prompt that instructs the model to summarize the article in about three sentences.
 prompt = (
-    "Summarize the following Magic: The Gathering news article completely without altering its content too much. "
-    "Ensure that all key points are included and maintain the article's original details. "
-    "Your summary should be comprehensive and capture the full content, using up to 1000 tokens if necessary. "
-    "Do not omit any important information. \n\n"
+    "Summarize the following Magic: The Gathering news article in 3 concise sentences. "
+    "Focus on capturing the key points and avoid altering the main details. "
+    "Do not include any URLs or external references in your summary. \n\n"
     "Headline: " + headline + "\n\n"
     "Article Content: " + article_content + "\n\n"
     "Summary:"
@@ -60,11 +66,10 @@ def generate_blog_post(prompt):
     payload = {
         "inputs": prompt,
         "parameters": {
-            "max_new_tokens": 1000,  # Allow up to 1000 tokens for a full summary.
+            "max_new_tokens": 300,  # Adjust if needed; this should allow for a concise summary.
             "temperature": 0.7,
             "do_sample": True,
-            # Optionally, you can specify a stop sequence if needed.
-            # "stop": ["\n\n"]
+            "stop": ["\n\n"]
         }
     }
     response = requests.post(API_URL, headers=headers, json=payload)
@@ -86,7 +91,7 @@ if generated_text.startswith(prompt):
 else:
     summary = generated_text
 
-# Append the news source and the original article URL at the end of the summary.
+# Append the original article URL and source at the end.
 final_output = f"{summary}\n\nSource: {source_name} ({article_url})"
 
 # --- Step 3: Save the Summary as a Markdown File ---
