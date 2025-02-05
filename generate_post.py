@@ -51,7 +51,7 @@ payload = {
         "max_new_tokens": 1337,  # Adjust as needed so total tokens (prompt + output) <= 2048
         "temperature": 0.7,
         "do_sample": True,
-        "stop": ["\n\n"],
+        #"stop": ["\n\n"],
     }
 }
 
