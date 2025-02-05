@@ -1,9 +1,8 @@
 import os
 import requests
 import datetime
-import tenacity  # Make sure you've installed tenacity (pip install tenacity)
+import tenacity  # Make sure you've installed it: pip install tenacity
 import urllib.parse
-
 
 # --- Configuration ---
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
@@ -19,11 +18,9 @@ os.makedirs(POSTS_FOLDER, exist_ok=True)
 query = '"Magic: The Gathering" AND competitive'
 encoded_query = urllib.parse.quote(query)
 url = f"https://newsapi.org/v2/everything?q={encoded_query}&sortBy=relevancy&language=en&apiKey={NEWS_API_KEY}"
-#url = f"https://newsapi.org/v2/everything?q={query}&sortBy=publishedAt&language=en&apiKey={NEWS_API_KEY}"
 response = requests.get(url)
-data = response.json()
-
-data = response.json()if data.get("status") != "ok":
+data = response.json()  # Corrected: Newline added here.
+if data.get("status") != "ok":
     raise Exception("Error fetching news:", data)
 
 articles = data.get("articles", [])
@@ -32,11 +29,11 @@ if not articles:
 
 # Use only one article for the summary.
 selected_article = articles[0]
-# Use the title as headline
+# Use the title as headline.
 headline = selected_article.get('title', 'No Title')
-# Use the description or content for additional context (if available)
+# Use the description or content for additional context (if available).
 article_content = selected_article.get('description') or selected_article.get('content') or headline
-# Extract the news source from the selected article
+# Extract the news source from the selected article.
 source_name = selected_article.get('source', {}).get('name', 'Unknown Source')
 
 # --- Step 2: Generate a Detailed Summary Using Hugging Face Inference API ---
