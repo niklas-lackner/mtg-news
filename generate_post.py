@@ -25,29 +25,34 @@ articles = data.get("articles", [])
 if not articles:
     raise Exception("No articles found for query.")
 
-# Use only one article for a concise summary; you can change this to articles[:n] if desired.
-selected_articles = articles[:1]
-# We only need the title; you can include more details if you wish.
-article_summaries = "\n".join(
-    [f"- {article['title']}" for article in selected_articles]
-)
+# Use only one article for a concise summary.
+selected_article = articles[0]
+article_summary = f"- {selected_article['title']}"
+# Extract the news source from the selected article
+source_name = selected_article.get('source', {}).get('name', 'Unknown Source')
 
 # --- Step 2: Generate a Very Concise Summary Using Hugging Face ---
-# Construct a prompt that asks for a one-paragraph summary and does NOT include URLs or extra details.
+# Construct a prompt that asks for a one-paragraph summary without including URLs.
 prompt = (
-    "Generate a very concise summary (one short paragraph) of the following Magic: The Gathering news headlines. "
-    "Do not include any URLs or references. Only produce a short summary in English.\n\n"
-    "News Headlines:\n" + article_summaries + "\n\nSummary:"
+    "Generate a very concise summary (one short paragraph) of the following Magic: The Gathering news headline. "
+    "Do not include any URLs or references in the final output. "
+    "News Headline:\n" +
+    article_summary +
+    "\n\nSummary:"
 )
 
 # Use a model that fits within the context window; here we use EleutherAI/gpt-neo-2.7B.
 API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B"
 headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
 
-# Set a token limit that, along with your prompt, stays within the 2048-token limit.
 payload = {
     "inputs": prompt,
-    "parameters": {"max_new_tokens": 1337, "temperature": 0.7, "do_sample": True}
+    "parameters": {
+        "max_new_tokens": 1337,  # Adjust as needed so total tokens (prompt + output) <= 2048
+        "temperature": 0.7,
+        "do_sample": True,
+        "stop": ["\n\n"],
+    }
 }
 
 hf_response = requests.post(API_URL, headers=headers, json=payload)
@@ -67,6 +72,9 @@ if generated_text.startswith(prompt):
 else:
     summary = generated_text
 
+# Append the news source at the end of the summary.
+final_output = f"{summary}\n\nSource: {source_name}"
+
 # --- Step 3: Save the Summary as a Markdown File ---
 today_str = datetime.date.today().isoformat()  # e.g., "2025-02-05"
 timestamp = datetime.datetime.now().strftime("%H%M%S")
@@ -77,7 +85,7 @@ title: "MTG News for {today_str}"
 date: {today_str}
 ---
 
-{summary}
+{final_output}
 """
 
 with open(filename, "w", encoding="utf-8") as f:
