@@ -1,7 +1,7 @@
 import os
 import requests
 import datetime
-import tenacity  # Ensure you've installed it: pip install tenacity
+import tenacity  # Make sure you've installed it: pip install tenacity
 import urllib.parse
 
 # --- Configuration ---
@@ -33,12 +33,12 @@ selected_article = articles[0]
 headline = selected_article.get('title', 'No Title')
 # Use the description or content for additional context (if available).
 article_content = selected_article.get('description') or selected_article.get('content') or headline
-# Extract the news source from the selected article.
+# Extract the news source name and the article URL.
 source_name = selected_article.get('source', {}).get('name', 'Unknown Source')
+article_url = selected_article.get('url', 'No URL')
 
-# --- Step 2: Generate a Comprehensive Summary Using Hugging Face Inference API ---
-# Revised prompt: instruct the model to summarize the article completely,
-# while preserving its content as much as possible without altering the original details.
+# --- Step 2: Generate a Detailed Summary Using Hugging Face Inference API ---
+# Construct a prompt that instructs the model to generate a comprehensive summary.
 prompt = (
     "Summarize the following Magic: The Gathering news article completely without altering its content too much. "
     "Ensure that all key points are included and maintain the article's original details. "
@@ -86,8 +86,8 @@ if generated_text.startswith(prompt):
 else:
     summary = generated_text
 
-# Append the news source at the end of the summary.
-final_output = f"{summary}\n\nSource: {source_name}"
+# Append the news source and the original article URL at the end of the summary.
+final_output = f"{summary}\n\nSource: {source_name} ({article_url})"
 
 # --- Step 3: Save the Summary as a Markdown File ---
 today_str = datetime.date.today().isoformat()  # e.g., "2025-02-05"
