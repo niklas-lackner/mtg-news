@@ -47,7 +47,7 @@ API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B"
 headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
 payload = {
     "inputs": prompt,
-    "parameters": {"max_new_tokens": 2000, "temperature": 0.7, "do_sample": True}
+    "parameters": {"max_new_tokens": 1500, "temperature": 0.7, "do_sample": True}
 }
 
 hf_response = requests.post(API_URL, headers=headers, json=payload)
