@@ -21,6 +21,8 @@ encoded_query = urllib.parse.quote(query)
 url = f"https://newsapi.org/v2/everything?q={encoded_query}&sortBy=relevancy&language=en&apiKey={NEWS_API_KEY}"
 #url = f"https://newsapi.org/v2/everything?q={query}&sortBy=publishedAt&language=en&apiKey={NEWS_API_KEY}"
 response = requests.get(url)
+data = response.json()
+
 data = response.json()if data.get("status") != "ok":
     raise Exception("Error fetching news:", data)
 
