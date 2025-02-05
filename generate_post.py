@@ -13,7 +13,7 @@ POSTS_FOLDER = os.path.join("docs", "_posts")
 os.makedirs(POSTS_FOLDER, exist_ok=True)
 
 # --- Step 1: Fetch a News Headline from NewsAPI ---
-query = "Magic: The Gathering"
+query = "mtg competitive"
 url = f"https://newsapi.org/v2/everything?q={query}&sortBy=publishedAt&language=en&apiKey={NEWS_API_KEY}"
 response = requests.get(url)
 data = response.json()
