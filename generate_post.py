@@ -1,6 +1,7 @@
 import os
 import requests
 import datetime
+import tenacity  # Make sure you've installed tenacity (pip install tenacity)
 
 # --- Configuration ---
 NEWS_API_KEY = os.getenv("NEWS_API_KEY")
@@ -28,43 +29,43 @@ if not articles:
 # Use only one article for a concise summary.
 selected_article = articles[0]
 article_summary = f"- {selected_article['title']}"
-# Extract the news source from the selected article
+# Extract the news source from the selected article.
 source_name = selected_article.get('source', {}).get('name', 'Unknown Source')
 
 # --- Step 2: Generate a Very Concise Summary Using Hugging Face ---
-# Construct a prompt that asks for a one-paragraph summary without including URLs.
+# Construct a simple, clear prompt.
 prompt = (
-    "Generate a very concise summary (one short paragraph) of the following Magic: The Gathering news headline. "
-    "Do not include any URLs or references in the final output. "
-    "News Headline:\n" +
-    article_summary +
-    "\n\nSummary:"
+    "Write a concise one-paragraph summary about the following Magic: The Gathering news headline. "
+    "Do not include any URLs or references.\n\n"
+    "Headline: " + article_summary + "\n\n"
+    "Summary:"
 )
 
-# Use a model that fits within the context window; here we use EleutherAI/gpt-neo-2.7B.
-API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B"
-headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
-
-payload = {
-    "inputs": prompt,
-    "parameters": {
-        "max_new_tokens": 1337,  # Adjust as needed so total tokens (prompt + output) <= 2048
-        "temperature": 0.7,
-        "do_sample": True,
-        #"stop": ["\n\n"],
+@tenacity.retry(
+    wait=tenacity.wait_random_exponential(min=5, max=60),
+    stop=tenacity.stop_after_attempt(5),
+    retry=tenacity.retry_if_exception_type(Exception)
+)
+def generate_blog_post(prompt):
+    API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B"
+    headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
+    # Set a lower max_new_tokens to keep output concise (adjust if needed).
+    payload = {
+        "inputs": prompt,
+        "parameters": {"max_new_tokens": 300, "temperature": 0.7, "do_sample": True, "stop": ["\n\n"]}
     }
-}
+    response = requests.post(API_URL, headers=headers, json=payload)
+    result = response.json()
+    if "error" in result:
+        raise Exception(result["error"])
+    if isinstance(result, list) and "generated_text" in result[0]:
+        return result[0]["generated_text"].strip()
+    raise Exception("Unexpected response format from Hugging Face API", result)
 
-hf_response = requests.post(API_URL, headers=headers, json=payload)
-hf_response_json = hf_response.json()
-
-# Debug: Uncomment the next line to print the raw response for troubleshooting.
-# print("Raw Hugging Face response:", hf_response_json)
-
-if isinstance(hf_response_json, list) and "generated_text" in hf_response_json[0]:
-    generated_text = hf_response_json[0]["generated_text"].strip()
-else:
-    raise Exception("Unexpected response format from Hugging Face API", hf_response_json)
+try:
+    generated_text = generate_blog_post(prompt)
+except Exception as e:
+    raise Exception("Failed to generate blog post after retries:", e)
 
 # Remove the prompt from the generated text if it is included.
 if generated_text.startswith(prompt):
