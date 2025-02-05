@@ -1,3 +1,9 @@
 title: "MTG News"
 description: "Daily blog posts about Magic: The Gathering news."
 theme: "jekyll-theme-minimal"
+
+collections:
+  posts:
+    output: true
+    permalink: /:collection/:year/:month/:day/:title/
+    folder: posts
