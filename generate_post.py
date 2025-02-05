@@ -8,9 +8,7 @@ HUGGINGFACE_API_TOKEN = os.getenv("HUGGINGFACE_API_TOKEN")
 if not NEWS_API_KEY or not HUGGINGFACE_API_TOKEN:
     raise Exception("Missing API keys! Set NEWS_API_KEY and HUGGINGFACE_API_TOKEN as environment variables.")
 
-hf_response = requests.post(API_URL, headers=headers, json=payload)
-hf_response_json = hf_response.json()
-print("Raw Hugging Face response:", hf_response_json)
+
 
 
 # Folder to store blog posts (for Jekyll, posts are usually in _posts)
@@ -49,8 +47,16 @@ prompt = (
 
 API_URL = "https://api-inference.huggingface.co/models/EleutherAI/gpt-neo-2.7B"
 headers = {"Authorization": f"Bearer {HUGGINGFACE_API_TOKEN}"}
+
+
+
+
 # Adjust parameters as needed; lower max_new_tokens and temperature to help control length and repetition.
 payload = {"inputs": prompt, "parameters": {"max_new_tokens": 200, "temperature": 0.5}}
+
+hf_response = requests.post(API_URL, headers=headers, json=payload)
+hf_response_json = hf_response.json()
+print("Raw Hugging Face response:", hf_response_json)
 
 hf_response = requests.post(API_URL, headers=headers, json=payload)
 hf_response_json = hf_response.json()
