@@ -146,3 +146,8 @@ date: {today_str}
 
 {final_output}
 """
+
+with open(filename, "w", encoding="utf-8") as f:
+    f.write(markdown_content)
+
+print(f"Blog post generated: {filename}")
