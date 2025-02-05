@@ -9,7 +9,7 @@ if not NEWS_API_KEY or not HUGGINGFACE_API_TOKEN:
     raise Exception("Missing API keys! Set NEWS_API_KEY and HUGGINGFACE_API_TOKEN as environment variables.")
 
 # Folder to store blog posts (ensure this folder exists in your repo)
-POSTS_FOLDER = "_posts"
+POSTS_FOLDER = os.path.join("docs", "posts")
 os.makedirs(POSTS_FOLDER, exist_ok=True)
 
 # --- Step 1: Fetch MTG News from NewsAPI ---
